@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Guides (large reference files, not needed for build)
+guides/
+
+# macOS
+.DS_Store
+
+# Environment (don't commit, use EAS secrets)
+.env
