@@ -275,13 +275,23 @@ export default function FindItemScreen() {
 
   const renderResultItem = ({ item }) => {
     const hasSpace = item.assigned_space_id && item.spaces;
-    
+
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.resultCard}
         onPress={() => openItemDetail(item)}
       >
-        <Text style={styles.itemName}>{item.item_name}</Text>
+        <View style={styles.resultRow}>
+          {/* Item Thumbnail */}
+          {item.image_uri ? (
+            <Image source={{ uri: item.image_uri }} style={styles.resultThumbnail} />
+          ) : (
+            <View style={styles.resultThumbnailPlaceholder}>
+              <Text style={styles.resultThumbnailIcon}>📦</Text>
+            </View>
+          )}
+          <View style={styles.resultTextContainer}>
+            <Text style={styles.itemName}>{item.item_name}</Text>
         
         {hasSpace ? (
           <View style={styles.locationContainer}>
@@ -310,6 +320,8 @@ export default function FindItemScreen() {
           {item.tags?.length > 3 && (
             <Text style={styles.moreTags}>+{item.tags.length - 3} more</Text>
           )}
+        </View>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -360,6 +372,12 @@ export default function FindItemScreen() {
                     <Text style={styles.noImagePlaceholderText}>📦 No photo</Text>
                   </View>
                 )}
+                <TouchableOpacity 
+                  style={styles.editPhotoButton}
+                  onPress={() => Alert.alert('Edit Photo', 'Photo editing coming soon!')}
+                >
+                  <Text style={styles.editPhotoText}>📸 Edit Photo</Text>
+                </TouchableOpacity>
               </View>
 
               {hasSpace ? (
@@ -804,14 +822,40 @@ const styles = StyleSheet.create({
   },
   resultCard: {
     backgroundColor: '#fff',
-    padding: 20,
+    padding: 15,
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  resultRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  resultThumbnail: {
+    width: 70,
+    height: 70,
+    borderRadius: 8,
+    marginRight: 12,
+    resizeMode: 'cover',
+  },
+  resultThumbnailPlaceholder: {
+    width: 70,
+    height: 70,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  resultThumbnailIcon: {
+    fontSize: 30,
+  },
+  resultTextContainer: {
+    flex: 1,
   },
   itemName: {
     fontSize: 18,
@@ -981,6 +1025,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  editPhotoButton: {
+    backgroundColor: '#f0f0f0',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+    alignSelf: 'flex-start',
+  },
+  editPhotoText: {
+    color: '#4A90D9',
+    fontSize: 14,
+    fontWeight: '500',
   },
   // Item Image
   imageSection: {

@@ -73,11 +73,21 @@ export async function saveSpace(spaceData, spaceId = null) {
 
   try {
     let data, error;
+    let finalImageUri = imageUri;
+    
+    // Upload image to Supabase Storage if provided (and not already a Supabase URL)
+    if (imageUri) {
+      const targetId = spaceId || 'new';
+      const storageUrl = await uploadImageToStorage(imageUri, 'space-images', targetId);
+      if (storageUrl) {
+        finalImageUri = storageUrl;
+      }
+    }
     
     const record = {
       macro_space: macroSpace,
       micro_zone: microZone,
-      image_uri: imageUri,
+      image_uri: finalImageUri,
     };
     
     if (spaceId) {
@@ -95,6 +105,20 @@ export async function saveSpace(spaceData, spaceId = null) {
         .insert([record])
         .select()
         .single());
+      
+      // If new space was created and we have a local image, re-upload with correct ID
+      if (data?.id && imageUri && !finalImageUri?.includes(data.id)) {
+        const storageUrl = await uploadImageToStorage(imageUri, 'space-images', data.id);
+        if (storageUrl) {
+          const { data: updatedData } = await supabase
+            .from('spaces')
+            .update({ image_uri: storageUrl })
+            .eq('id', data.id)
+            .select()
+            .single();
+          if (updatedData) data.image_uri = storageUrl;
+        }
+      }
     }
     
     if (error) throw error;
@@ -142,6 +166,7 @@ export async function saveItem({
   }
 
   try {
+    // First insert without image (we'll upload after getting the ID)
     const { data, error } = await supabase
       .from('items')
       .insert([{
@@ -150,13 +175,32 @@ export async function saveItem({
         recommended_ideal_space: recommendedIdealSpace,
         organization_tips: organizationTips,
         assigned_space_id: assignedSpaceId,
-        image_uri: imageUri,
+        image_uri: null, // Will update after upload
         location_description: locationDescription,
       }])
       .select()
       .single();
     
     if (error) throw error;
+    
+    // Upload image to Supabase Storage if provided
+    if (imageUri && data?.id) {
+      const storageUrl = await uploadImageToStorage(imageUri, 'item-images', data.id);
+      if (storageUrl) {
+        // Update record with storage URL
+        const { data: updatedData, error: updateError } = await supabase
+          .from('items')
+          .update({ image_uri: storageUrl })
+          .eq('id', data.id)
+          .select()
+          .single();
+        
+        if (!updateError && updatedData) {
+          data.image_uri = storageUrl;
+        }
+      }
+    }
+    
     console.log('[dbService.saveItem] Saved:', data);
     return data;
   } catch (error) {
@@ -194,7 +238,12 @@ export async function updateItem(itemId, updates) {
     if (updates.recommendedIdealSpace !== undefined) updateData.recommended_ideal_space = updates.recommendedIdealSpace;
     if (updates.organizationTips !== undefined) updateData.organization_tips = updates.organizationTips;
     if (updates.assignedSpaceId !== undefined) updateData.assigned_space_id = updates.assignedSpaceId;
-    if (updates.imageUri !== undefined) updateData.image_uri = updates.imageUri;
+    
+    // Handle image upload to Supabase Storage
+    if (updates.imageUri !== undefined) {
+      const storageUrl = await uploadImageToStorage(updates.imageUri, 'item-images', itemId);
+      updateData.image_uri = storageUrl || updates.imageUri;
+    }
 
     const { data, error } = await supabase
       .from('items')
@@ -482,6 +531,74 @@ export async function saveImagePermanently(tempUri, type = 'item') {
     console.error('[dbService.saveImagePermanently] Stack:', error.stack);
     // Throw error so caller knows it failed - DON'T silently return temp URI
     throw error;
+  }
+}
+
+/**
+ * Upload image to Supabase Storage and get permanent URL
+ * @param {string} localUri - Local image URI
+ * @param {string} bucket - 'item-images' or 'space-images'
+ * @param {string} recordId - Item or space ID
+ * @returns {Promise<string|null>} - Supabase Storage public URL
+ */
+export async function uploadImageToStorage(localUri, bucket, recordId) {
+  if (!supabase || !localUri) return null;
+  
+  // Skip if already a Supabase URL
+  if (localUri.includes('supabase.co')) return localUri;
+  // Skip if already a data URL (placeholder)
+  if (localUri.startsWith('data:')) return null;
+  
+  try {
+    console.log('[dbService.uploadImageToStorage] Uploading to', bucket, ':', localUri);
+    
+    // Read file as base64
+    const base64 = await FileSystem.readAsStringAsync(localUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    
+    // Determine content type
+    const ext = localUri.split('.').pop()?.toLowerCase() || 'jpg';
+    const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
+    const fileExt = ext === 'png' ? 'png' : 'jpg';
+    
+    // Create unique filename
+    const filename = `${recordId}-${Date.now()}.${fileExt}`;
+    const filePath = `${filename}`;
+    
+    // Convert base64 to Uint8Array
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    // Upload to Supabase Storage
+    const { data, error } = await supabase
+      .storage
+      .from(bucket)
+      .upload(filePath, bytes, {
+        contentType: contentType,
+        upsert: true,
+      });
+    
+    if (error) {
+      console.error('[dbService.uploadImageToStorage] Upload error:', error);
+      return null;
+    }
+    
+    // Get public URL
+    const { data: urlData } = supabase
+      .storage
+      .from(bucket)
+      .getPublicUrl(filePath);
+    
+    console.log('[dbService.uploadImageToStorage] Public URL:', urlData?.publicUrl);
+    return urlData?.publicUrl || null;
+    
+  } catch (error) {
+    console.error('[dbService.uploadImageToStorage] Error:', error.message);
+    return null;
   }
 }
 
