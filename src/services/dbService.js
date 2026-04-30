@@ -6,16 +6,23 @@
 import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
 import * as FileSystem from 'expo-file-system/legacy';
+import Constants from 'expo-constants';
+
+// Get env vars from both process.env (dev) and Constants (production build)
+const extra = Constants.expoConfig?.extra || {};
+
+const envUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || extra?.supabaseUrl || '';
+const envKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || extra?.supabaseAnonKey || '';
 
 // Debug: Log all env vars to see what's available
 console.log('[dbService] process.env keys:', Object.keys(process.env || {}).filter(k => k.includes('EXPO')));
-console.log('[dbService] EXPO_PUBLIC_SUPABASE_URL:', process.env.EXPO_PUBLIC_SUPABASE_URL ? 'SET' : 'MISSING');
-console.log('[dbService] EXPO_PUBLIC_SUPABASE_ANON_KEY:', process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'MISSING');
-console.log('[dbService] EXPO_PUBLIC_GEMINI_API_KEY:', process.env.EXPO_PUBLIC_GEMINI_API_KEY ? 'SET' : 'MISSING');
+console.log('[dbService] Constants.extra:', Object.keys(extra || {}));
+console.log('[dbService] EXPO_PUBLIC_SUPABASE_URL:', envUrl ? 'SET' : 'MISSING');
+console.log('[dbService] EXPO_PUBLIC_SUPABASE_ANON_KEY:', envKey ? 'SET' : 'MISSING');
 
 // Initialize Supabase client - try multiple ways to access env vars
-const rawUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || __DEV__?.env?.EXPO_PUBLIC_SUPABASE_URL || '';
-const rawKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || __DEV__?.env?.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+const rawUrl = envUrl;
+const rawKey = envKey;
 
 // Aggressive whitespace/newline trimming
 const supabaseUrl = rawUrl.replace(/\s/g, '').trim();

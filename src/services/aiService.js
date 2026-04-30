@@ -1,13 +1,15 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as FileSystem from 'expo-file-system/legacy';
+import Constants from 'expo-constants';
 
 /**
  * AI Service - Google Gemini Vision Integration
  * Uses gemini-1.5-flash for item analysis and organization recommendations
  */
 
-// Initialize the Gemini API client
-const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY?.trim();
+// Get API key from process.env (dev) or Constants (production build)
+const extra = Constants.expoConfig?.extra || {};
+const apiKey = (process.env.EXPO_PUBLIC_GEMINI_API_KEY || extra?.geminiApiKey || '').trim();
 
 console.log('[aiService] Gemini API Key available:', !!apiKey);
 console.log('[aiService] Gemini API Key length:', apiKey?.length);
