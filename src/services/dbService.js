@@ -40,12 +40,6 @@ if (supabaseUrl && supabaseKey &&
       autoRefreshToken: false,
       detectSessionInUrl: false,
     },
-    global: {
-      headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-      },
-    },
   });
   console.log('[dbService] Supabase client initialized');
 } else {
