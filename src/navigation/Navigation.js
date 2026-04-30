@@ -63,17 +63,7 @@ export default function Navigation() {
             title: 'Find Item',
           }}
         />
-        <Tab.Screen
-          name="Guides"
-          component={GuidesScreen}
-          options={{
-            tabBarLabel: 'Guides',
-            tabBarIcon: ({ focused }) => (
-              <TabIcon label="📚" focused={focused} />
-            ),
-            title: 'My Guides',
-          }}
-        />
+        {/* Guides tab hidden - feature not ready */}
       </Tab.Navigator>
     </NavigationContainer>
   );

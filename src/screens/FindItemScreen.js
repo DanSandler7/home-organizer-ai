@@ -345,22 +345,22 @@ export default function FindItemScreen() {
                 </View>
               </View>
 
-              {/* Item Image */}
-              {selectedItem.image_uri ? (
-                <View style={styles.imageSection}>
-                  <Image 
-                    source={{ uri: selectedItem.image_uri }} 
+              {/* Item Photo */}
+              <View style={styles.detailSection}>
+                <Text style={styles.detailLabel}>📷 Item Photo</Text>
+                {selectedItem.image_uri ? (
+                  <Image
+                    source={{ uri: selectedItem.image_uri }}
                     style={styles.itemImage}
+                    resizeMode="cover"
                     onError={(e) => console.log('Item image load error:', e.nativeEvent.error)}
                   />
-                </View>
-              ) : (
-                <View style={styles.imageSection}>
+                ) : (
                   <View style={styles.noImagePlaceholder}>
-                    <Text style={styles.noImagePlaceholderText}>📦</Text>
+                    <Text style={styles.noImagePlaceholderText}>📦 No photo</Text>
                   </View>
-                </View>
-              )}
+                )}
+              </View>
 
               {hasSpace ? (
                 <View style={styles.detailSection}>
