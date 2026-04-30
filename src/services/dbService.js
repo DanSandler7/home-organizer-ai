@@ -8,19 +8,42 @@ import 'react-native-url-polyfill/auto';
 import * as FileSystem from 'expo-file-system/legacy';
 
 // Initialize Supabase client
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
+const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
 let supabase = null;
+let initError = null;
+
+// Debug logging
+console.log('[dbService] URL available:', !!supabaseUrl);
+console.log('[dbService] Key available:', !!supabaseKey);
+console.log('[dbService] URL starts with http:', supabaseUrl?.startsWith('http'));
+console.log('[dbService] Key starts with eyJ:', supabaseKey?.startsWith('eyJ'));
 
 // Only initialize if keys are valid (not placeholder)
 if (supabaseUrl && supabaseKey && 
     !supabaseUrl.includes('placeholder') && 
-    !supabaseKey.includes('placeholder')) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-  console.log('[dbService] Supabase client initialized');
+    !supabaseKey.includes('placeholder') &&
+    supabaseUrl.startsWith('http')) {
+  try {
+    supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      }
+    });
+    console.log('[dbService] Supabase client initialized successfully');
+  } catch (err) {
+    initError = err;
+    console.error('[dbService] Failed to create Supabase client:', err.message);
+  }
 } else {
-  console.warn('[dbService] Supabase not configured - using placeholder mode');
+  const reason = !supabaseUrl ? 'missing URL' : 
+                 !supabaseKey ? 'missing key' : 
+                 supabaseUrl.includes('placeholder') ? 'URL is placeholder' :
+                 supabaseKey.includes('placeholder') ? 'key is placeholder' :
+                 !supabaseUrl.startsWith('http') ? 'URL invalid' : 'unknown';
+  console.warn('[dbService] Supabase not configured:', reason);
 }
 
 /**

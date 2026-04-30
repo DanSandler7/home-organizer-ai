@@ -50,6 +50,7 @@ export default function SpacesScreen() {
 
   // View detail modal
   const [viewingSpace, setViewingSpace] = useState(null);
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
     loadSpaces();
@@ -74,6 +75,7 @@ export default function SpacesScreen() {
       }
       setItemCounts(counts);
     } catch (error) {
+      setLoadError(error.message);
       Alert.alert('Error', 'Failed to load spaces: ' + error.message);
     } finally {
       setLoading(false);
@@ -303,6 +305,19 @@ export default function SpacesScreen() {
         <Text style={styles.title}>My Storage Spaces</Text>
         <Text style={styles.subtitle}>{spaceTree.length} top-level location{spaceTree.length !== 1 ? 's' : ''}</Text>
       </View>
+
+      {/* Diagnostic error display */}
+      {loadError && (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorTitle}>Connection Error</Text>
+          <Text style={styles.errorText}>{loadError}</Text>
+          <Text style={styles.errorDebug}>
+            URL: {process.env.EXPO_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing'}{'\n'}
+            Key: {process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing'}{'\n'}
+            Check EAS env vars are set to "Sensitive" not "Secret"
+          </Text>
+        </View>
+      )}
 
       <TouchableOpacity style={styles.addButton} onPress={openAddParentModal}>
         <Text style={styles.addButtonText}>+ Add Location</Text>
@@ -674,4 +689,31 @@ const styles = StyleSheet.create({
   editButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   closeButton: { backgroundColor: '#f0f0f0' },
   closeButtonText: { color: '#666', fontSize: 16, fontWeight: '600' },
+
+  // ── Error Diagnostic ──
+  errorBox: {
+    backgroundColor: '#ffebee',
+    borderRadius: 8,
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#d32f2f',
+  },
+  errorTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#d32f2f',
+    marginBottom: 4,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 8,
+  },
+  errorDebug: {
+    fontSize: 12,
+    color: '#666',
+    fontFamily: 'monospace',
+  },
 });
