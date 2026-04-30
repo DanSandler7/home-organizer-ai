@@ -7,11 +7,23 @@ import * as FileSystem from 'expo-file-system/legacy';
  */
 
 // Initialize the Gemini API client
-const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY?.trim();
+
+console.log('[aiService] Gemini API Key available:', !!apiKey);
+console.log('[aiService] Gemini API Key length:', apiKey?.length);
+console.log('[aiService] Gemini API Key starts with AIza:', apiKey?.startsWith('AIza'));
+console.log('[aiService] Gemini API includes placeholder:', apiKey?.includes('placeholder'));
 
 let genAI = null;
 if (apiKey && !apiKey.includes('placeholder') && apiKey !== 'your_gemini_api_key_here') {
-  genAI = new GoogleGenerativeAI(apiKey);
+  try {
+    genAI = new GoogleGenerativeAI(apiKey);
+    console.log('[aiService] Gemini client initialized');
+  } catch (err) {
+    console.error('[aiService] Failed to initialize Gemini:', err.message);
+  }
+} else {
+  console.warn('[aiService] Gemini API not configured - using placeholder mode');
 }
 
 /**
