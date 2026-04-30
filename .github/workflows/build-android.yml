@@ -1,0 +1,45 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+    
+    - name: Install dependencies
+      run: npm install
+    
+    - name: Set up EAS
+      run: npm install -g eas-cli
+    
+    - name: Configure EAS project
+      run: eas init --force --non-interactive
+      env:
+        EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
+    
+    - name: Build Android APK
+      run: eas build --platform android --profile production --non-interactive --no-wait
+      env:
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apk
+        path: '*.apk'
