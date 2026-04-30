@@ -7,43 +7,50 @@ import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
 import * as FileSystem from 'expo-file-system/legacy';
 
-// Initialize Supabase client
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
-const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim();
+// Debug: Log all env vars to see what's available
+console.log('[dbService] process.env keys:', Object.keys(process.env || {}).filter(k => k.includes('EXPO')));
+console.log('[dbService] EXPO_PUBLIC_SUPABASE_URL:', process.env.EXPO_PUBLIC_SUPABASE_URL ? 'SET' : 'MISSING');
+console.log('[dbService] EXPO_PUBLIC_SUPABASE_ANON_KEY:', process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'MISSING');
+console.log('[dbService] EXPO_PUBLIC_GEMINI_API_KEY:', process.env.EXPO_PUBLIC_GEMINI_API_KEY ? 'SET' : 'MISSING');
+
+// Initialize Supabase client - try multiple ways to access env vars
+const rawUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || __DEV__?.env?.EXPO_PUBLIC_SUPABASE_URL || '';
+const rawKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || __DEV__?.env?.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+
+// Aggressive whitespace/newline trimming
+const supabaseUrl = rawUrl.replace(/\s/g, '').trim();
+const supabaseKey = rawKey.replace(/\s/g, '').trim();
 
 let supabase = null;
-let initError = null;
 
 // Debug logging
-console.log('[dbService] URL available:', !!supabaseUrl);
-console.log('[dbService] Key available:', !!supabaseKey);
-console.log('[dbService] URL starts with http:', supabaseUrl?.startsWith('http'));
+console.log('[dbService] URL length:', supabaseUrl?.length, 'Key length:', supabaseKey?.length);
 console.log('[dbService] Key starts with eyJ:', supabaseKey?.startsWith('eyJ'));
+console.log('[dbService] Key last 10 chars:', supabaseKey?.slice(-10));
 
 // Only initialize if keys are valid (not placeholder)
 if (supabaseUrl && supabaseKey && 
     !supabaseUrl.includes('placeholder') && 
     !supabaseKey.includes('placeholder') &&
-    supabaseUrl.startsWith('http')) {
-  try {
-    supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      }
-    });
-    console.log('[dbService] Supabase client initialized successfully');
-  } catch (err) {
-    initError = err;
-    console.error('[dbService] Failed to create Supabase client:', err.message);
-  }
+    supabaseUrl.startsWith('http') &&
+    supabaseKey.startsWith('eyJ')) {
+  supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      headers: {
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+      },
+    },
+  });
+  console.log('[dbService] Supabase client initialized');
 } else {
-  const reason = !supabaseUrl ? 'missing URL' : 
-                 !supabaseKey ? 'missing key' : 
-                 supabaseUrl.includes('placeholder') ? 'URL is placeholder' :
-                 supabaseKey.includes('placeholder') ? 'key is placeholder' :
-                 !supabaseUrl.startsWith('http') ? 'URL invalid' : 'unknown';
-  console.warn('[dbService] Supabase not configured:', reason);
+  console.warn('[dbService] Supabase not configured - using placeholder mode');
+  console.warn('[dbService] URL valid:', !!supabaseUrl && supabaseUrl.startsWith('http'), 'Key valid:', !!supabaseKey && supabaseKey.startsWith('eyJ'));
 }
 
 /**
@@ -305,11 +312,14 @@ export async function getAllSpaces() {
       .select('*')
       .order('created_at', { ascending: false });
     
-    if (error) throw error;
+    if (error) {
+      console.error('[dbService.getAllSpaces] Supabase error:', JSON.stringify(error));
+      throw new Error(`${error.message} (code: ${error.code})`);
+    }
     console.log('[dbService.getAllSpaces] Found:', data?.length || 0, 'spaces');
     return data || [];
   } catch (error) {
-    console.error('[dbService.getAllSpaces] Error:', error);
+    console.error('[dbService.getAllSpaces] Error:', error.message, error.stack);
     throw error;
   }
 }
